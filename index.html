@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Git App Manager v0.0.0-alpha.3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic@6.4.0/picnic.min.css">
+</head>
+<script src="https://unpkg.com/hyperhtml@latest/min.js"></script>
+<app>
+  <section id="header">
+    <h1>Git App Manager v0.0.0-alpha.3</h1>
+    <p class="subheading">Install static websites directly from Github. Use them offline. Edit the source code with <a href="https://github.com/wmhilton/nde" target="_blank" rel="noopener">nde</a>. <i><b>Planned features:</b> Fork sites. Control when and if sites auto-update. Rollback an app to any previous version. Install multiple versions of an app. Take advantage of a shared library modules cache. Seed your app with P2P technology of some sort. Facilitate webpush notifications.</i></p>
+  </section>
+  <section id="installed_list">
+    <h2>Installed Git Apps</h2>
+    <p class="subheading">Apps are just folders. Click on the folder link to open the app.</p>
+    <div id="folder_list" style="padding-left: 1em"></div>
+  </section>
+  <section id="general_search">
+    <h2>Search on Github</h2>
+    <p class="subheading">Find and install static sites, such as Github Pages content.</p>
+    <div style="display: flex">
+        <input type="text" id="text_search_input" onkeydown="textSearchKeyDown(event)"></input>
+        <button type="button" onclick="textSearch()">Search</button>
+      </div>
+    <div id="text_search_results"></div>
+  </section>
+  <section id="topic_search">
+    <h2>Public Directory</h2>
+    <p class="subheading">Add the<span class="label" style="background: #f1f8ff; color: #0366d6;">gitapp</span> topic to your repo to display it here! <a href="https://help.github.com/articles/classifying-your-repository-with-topics/" target="_blank" rel="noopener">Instructions</a></p>
+    <div id="topic_search_results"></div>
+  </section>
+</app>
+<style>
+section {
+  padding: 25px;
+}
+.card {
+  padding: 0.6em 0.8em;
+}
+.subheading {
+  margin-top: -20px;
+}
+#text_search_input {
+  margin: 0.3em;
+  margin-left: 0;
+}
+@media (min-width: 900px) {
+  app {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+    "header header header"
+    "sidebar topic search";
+  }
+  #header {
+    grid-area: header;
+  }
+  #installed_list {
+    grid-area: sidebar;
+  }
+  #topic_search {
+    grid-area: topic;
+  }
+  #general_search {
+    grid-area: search;
+  }
+}
+</style>
+<script>
+const $_ = x => document.getElementById(x)
+
+async function install (owner, name, tag) {
+  let msg = {
+    type: "clone",
+    repo: owner + '/' + name,
+    ref: tag,
+    name: name
+  }
+  navigator.serviceWorker.controller.postMessage(msg)
+}
+
+async function fetchLanguages(x) {
+  let json = await fetch(x.languages_url, {
+    headers: {
+      'accept': 'application/vnd.github.mercy-preview+json'
+    }
+  }).then(res => res.json())
+  let langs = Object.keys(json)
+  return langs.join(', ')
+}
+
+async function fetchTags(repo) {
+  let json = await fetch(repo.tags_url, {
+    headers: {
+      'accept': 'application/vnd.github.mercy-preview+json'
+    }
+  }).then(res => res.json())
+  return json.map(x => hyperHTML.hyper`<a href="" onclick=${e => { e.preventDefault(); install(repo.owner.login, repo.name, x.name)}}>${x.name}</a>, `)
+}
+
+async function renderRepo(x) {
+  return hyperHTML.hyper`
+  <div class="card">
+    <div style="float: right;">
+      <span><i class="fa fa-eye"></i>${x.watchers_count}</span> <span><i class="fa fa-star"></i>${x.stargazers_count}</span> <span><i class="fa fa-code-fork"></i>${x.forks_count}</span>
+    </div>
+    <div>
+      <a href=${`https://github.com/${x.owner.login}`} target="_blank" rel="noopener">${x.owner.login}</a> / <a href=${`https://github.com/${x.owner.login}/${x.name}`} target="_blank" rel="noopener">${x.name}</a>
+    </div>
+    <div style="float: right;">
+      <button type="button" onclick=${e => install(x.owner.login, x.name, 'master')}>Install</button>
+    </div>
+    <div>
+      ${x.description}
+    </div>
+  </div>`
+}
+
+function textSearchKeyDown (event) {
+  if (event.key === 'Enter') {
+    textSearch()
+  } else {
+    console.log(event)
+  }
+}
+
+async function textSearch () {
+  let text = $_('text_search_input').value
+  let json = await fetch('https://api.github.com/search/repositories?in=name&q=' + text, {
+    headers: {
+      'accept': 'application/vnd.github.mercy-preview+json'
+    }
+  }).then(res => res.json())
+  
+  hyperHTML.bind($_('text_search_results'))`${json.items.map(renderRepo)}`
+}
+
+(async function () {
+  let json = await fetch('https://api.github.com/search/repositories?q=topic:gitapp', {
+    headers: {
+      'accept': 'application/vnd.github.mercy-preview+json'
+    }
+  }).then(res => res.json())
+  hyperHTML.bind($_('topic_search_results'))`${json.items.map(renderRepo)}`
+})()
+
+async function uninstall (x) {
+  let msg = {
+    type: "delete",
+    directory: x
+  }
+  navigator.serviceWorker.controller.postMessage(msg)
+}
+
+function renderInstallApp (x) {
+  console.log('x =', x)
+  return hyperHTML.hyper`
+    <div class="card">
+      <div style="float: right;">
+        <button type="button" class="pseudo" onclick=${e => uninstall(x)}><i class="fa fa-trash" style="color: red"></i></button>
+      </div>
+      <p><a href="${x + '/'}">${x}/</a><p>
+    </div>`
+}
+
+if (!navigator.serviceWorker) {
+  alert("Your browser doesn't support a feature (navigator.serviceWorker) needed for this app to work. Try using a newer browser.")
+} else {
+  navigator.serviceWorker.addEventListener('message', event => {
+    let data = event.data
+    console.log('data =', data)
+    if (data.type === 'status') {
+      if (data.status === 'complete') {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'list'
+        })
+        alert('Complete!')
+      } else if (data.status === 'error') {
+        alert('Error! ' + data.error.message)
+      }
+    } else if (data.type === 'UpdatedDirectoryList') {
+      console.log(data.list)
+      hyperHTML.bind($_('folder_list'))`${data.list.map(renderInstallApp)}`
+    }
+  })
+  
+  navigator.serviceWorker
+  .register('service-worker.js', { scope: '/' })
+  .then((reg) => {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'list'
+    })
+    reg.addEventListener('updatefound', () => {
+      let newWorker = reg.installing
+      newWorker.addEventListener('statechange', () => {
+        console.log('reg.installing.state =', newWorker.state)
+        if (newWorker.state === 'activated') {
+          // let msg = {
+          //   type: "clone",
+          //   repo: "wmhilton/test.empty",
+          //   branch: "master",
+          //   name: "foo"
+          // }
+          // console.log('fetch()')
+          // newWorker.postMessage(msg)
+        }
+      })
+    })
+  })
+}
+</script>
