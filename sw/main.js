@@ -6,11 +6,35 @@ importScripts('https://unpkg.com/omnipath@1.1.5/dist/omnipath.min.js')
 importScripts('./sw/render-index.js')
 importScripts('./sw/rimraf.js')
 importScripts('https://unpkg.com/isomorphic-git@0.0.12/dist/bundle.umd.min.js')
+importScripts('https://gundb-git-app-manager.herokuapp.com/gun.js')
 
 console.log('git =', git)
 console.log('OmniPath =', OmniPath)
 console.log('renderIndex =', renderIndex)
 console.log('BrowserFS =', BrowserFS)
+console.log('gun =', Gun)
+
+async function getGun () {
+  global.gun = Gun(['https://gundb-git-app-manager.herokuapp.com/gun']);
+  return global.gun
+}
+
+async function getUUID () {
+  return await new Promise((resolve, reject) => {
+    fs.readFile('.uuid', 'utf8', async (err, contents) => {
+      if (typeof contents === 'string' && contents.length > 1) return resolve(contents)
+      if (err.code === 'ENOENT') {
+        let gun = await getGun()
+        let uuid = gun._.opt.uuid()
+        let me = gun.get(`client/${uuid}`).put({birthdate: Date.now()})
+        gun.get('clients').set(me)
+        fs.writeFile('/.uuid', uuid, 'utf8', err => err ? reject(err) : resolve(uuid))
+      } else {
+        reject(err)
+      }
+    })
+  })
+}
 
 async function clone ({ref, repo, name}) {
   await fsReady
@@ -21,9 +45,26 @@ async function clone ({ref, repo, name}) {
     .clone(`https://cors-buster-jfpactjnem.now.sh/github.com/${repo}`)
 }
 
+async function UpdatedDirectoryList (event) {
+  return new Promise(function(resolve, reject) {
+    fs.readdir('/', (err, files) => {
+      files = files.filter(x => !x.startsWith('.'))
+      let msg = {
+        type: 'UpdatedDirectoryList',
+        regarding: event.data,
+        list: files
+      }
+      self.clients.matchAll().then(all => all.map(client => client.postMessage(msg)))
+      resolve()
+    })
+  })
+}
+
 self.addEventListener('install', event => {
   return event.waitUntil((async () => {
     await fsReady
+    let uuid = await getUUID()
+    console.log(uuid)
     console.log('skipWaiting()')
     await self.skipWaiting()
     console.log('skipWaiting() complete')
@@ -38,17 +79,27 @@ self.addEventListener('activate', event => {
   })())
 })
 
-self.addEventListener('message', event => {
+self.addEventListener('message', async event => {
   console.log(event.data)
   if (event.data.type === 'clone') {
-    clone(event.data).then(() => {
+    clone(event.data).then(async () => {
       console.log('Done cloning.')
+      // Tell all local browser windows and workers the clone is complete.
       let msg = {
         type: 'status',
         status: 'complete',
         regarding: event.data
       }
       console.log('event =', event)
+      // Tell all the peers that we have a copy of this repository.
+      let gun = await getGun()
+      let uuid = await getUUID()
+      gun.get(`client/${uuid}`).val(me => {
+        console.log('me = ', me)
+        gun.get('repos').get(`github.com/${event.data.repo}`).get('seeders').set(me).val(foo =>
+          console.log('foo = ', foo)
+        )
+      })
       self.clients.matchAll().then(all => all.map(client => client.postMessage(msg)));
     }).catch(err => {
       let msg = {
@@ -64,26 +115,12 @@ self.addEventListener('message', event => {
   } else if (event.data.type === 'list') {
     console.log('listing')
     fs.readdir('/', (err, files) => {
-      console.log('files =', files)
-      let msg = {
-        type: 'UpdatedDirectoryList',
-        regarding: event.data,
-        list: files
-      }
-      self.clients.matchAll().then(all => all.map(client => client.postMessage(msg)));
+      UpdatedDirectoryList(event)
     })
   } else if (event.data.type == 'delete') {
     console.log('deleting')
     rimraf(event.data.directory).then(() => {
-      fs.readdir('/', (err, files) => {
-        console.log('files =', files)
-        let msg = {
-          type: 'UpdatedDirectoryList',
-          regarding: event.data,
-          list: files
-        }
-        self.clients.matchAll().then(all => all.map(client => client.postMessage(msg)));
-      })
+      UpdatedDirectoryList(event)
     })
   }
 })
