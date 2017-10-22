@@ -1,4 +1,5 @@
 {
   "public": true,
-  "alias": "git-app-manager"
+  "alias": "git-app-manager",
+  "type": "static"
 }
