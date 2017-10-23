@@ -5,7 +5,7 @@ importScripts('./sw/mime.js')
 importScripts('https://unpkg.com/omnipath@1.1.5/dist/omnipath.min.js')
 importScripts('./sw/render-index.js')
 importScripts('./sw/rimraf.js')
-importScripts('https://unpkg.com/isomorphic-git@0.0.12/dist/bundle.umd.min.js')
+importScripts('https://unpkg.com/isomorphic-git@0.0.19/dist/bundle.umd.min.js')
 importScripts('https://gundb-git-app-manager.herokuapp.com/gun.js')
 
 console.log('git =', git)
@@ -37,11 +37,22 @@ async function getUUID () {
 }
 
 async function clone ({ref, repo, name}) {
+  function handleProgress (e) {
+    let msg = {
+      type: 'status',
+      status: 'progress',
+      regarding: {ref, repo, name},
+      progress: e.loaded / e.total
+    }
+    self.clients.matchAll().then(all => all.map(client => client.postMessage(msg)));
+  }
+  
   await fsReady
   let dir = name + '-' + ref
   return git(dir)
     .depth(1)
     .branch(ref)
+    .onprogress(handleProgress)
     .clone(`https://cors-buster-jfpactjnem.now.sh/github.com/${repo}`)
 }
 

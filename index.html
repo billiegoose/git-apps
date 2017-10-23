@@ -6,34 +6,8 @@
   <link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic@6.4.0/picnic.min.css">
 </head>
-<app>
-  <section id="Header__Section">
-    <h1>Git App Manager v0.0.0-alpha.3</h1>
-    <p class="subheading">Install static websites directly from Github. Use them offline. Edit the source code with <a href="https://github.com/wmhilton/nde" target="_blank" rel="noopener">nde</a>. <i><b>Planned features:</b> Fork sites. Control when and if sites auto-update. Rollback an app to any previous version. Install multiple versions of an app. Take advantage of a shared library modules cache. Seed your app with P2P technology of some sort. Facilitate webpush notifications.</i></p>
-  </section>
-
-  <section id="Installed__Section">
-    <h2>Installed Git Apps</h2>
-    <p class="subheading">Apps are just folders. Click on the folder link to open the app.</p>
-    <div id="Installed__Results"></div>
-  </section>
-
-  <section id="Search__Section">
-    <h2>Search on Github</h2>
-    <p class="subheading">Find and install static sites, such as Github Pages content.</p>
-    <div style="display: flex">
-        <input type="text" id="Search__Input" onkeydown="Search__Input__KeyDown(event)"></input>
-        <button type="button" onclick="Search__Button__Click()">Search</button>
-      </div>
-    <div id="Search__Results"></div>
-  </section>
-
-  <section id="Topic__Section">
-    <h2>Public Directory</h2>
-    <p class="subheading">Add the<span class="label" style="background: #f1f8ff; color: #0366d6;">gitapp</span> topic to your repo to display it here! <a href="https://help.github.com/articles/classifying-your-repository-with-topics/" target="_blank" rel="noopener">Instructions</a></p>
-    <div id="Topic__Results"></div>
-  </section>
-</app>
+<div id="app">
+</div>
 <style>
 section {
   padding: 25px;
@@ -44,10 +18,31 @@ section {
 .subheading {
   margin-top: -20px;
 }
+.label {
+  /* Override the default PicnicCSS style here */
+  margin-left: 0;
+}
 #Search__Input {
   margin: 0.3em;
   margin-left: 0;
 }
+.Repo__Header {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+.Repo__ProgressBar {
+  flex-grow: 1;
+  padding: 0 1em;
+}
+.Repo__ProgressBar span {
+  background-color: #0366d6;
+  border-radius: 0.2em;
+  display: inline-block;
+  height: 1em;
+  vertical-align: middle;
+}
+  
 @media (min-width: 900px) {
   app {
     display: grid;
@@ -73,9 +68,115 @@ section {
 </style>
 <script src="https://unpkg.com/hyperhtml@latest/min.js"></script>
 <script>
+
+const store = {
+  installed_apps: [],
+  progress: [],
+  topic: [],
+  searchresults: []
+}
+
+function update () {
+  hyperHTML.bind(document.getElementById('app'))`
+  <app>
+    ${renderHeader__Section()}
+    ${renderInstalled__Section()}
+    ${renderSearch__Section()}
+    ${renderTopic__Section()}
+  </app>
+`
+}
+
+function renderHeader__Section () {
+  return hyperHTML`
+  <section id="Header__Section">
+    <h1>Git App Manager v0.0.0-alpha.3</h1>
+    <p class="subheading">Install static websites directly from Github. Use them offline. Edit the source code with <a href="https://github.com/wmhilton/nde" target="_blank" rel="noopener">nde</a>. <i><b>Planned features:</b> Fork sites. Control when and if sites auto-update. Rollback an app to any previous version. Install multiple versions of an app. Take advantage of a shared library modules cache. Seed your app with P2P technology of some sort. Facilitate webpush notifications.</i></p>
+  </section>`
+}
+
+function renderInstalled__Section () {
+  return hyperHTML`
+  <section id="Installed__Section">
+    <h2>Installed Git Apps</h2>
+    <p class="subheading">Apps are just folders. Click on the folder link to open the app.</p>
+    <div id="Installed__Results">
+      ${store.installed_apps.map(renderInstallApp)}
+    </div>
+  </section>
+  `
+  
+  function renderInstallApp (x) {
+    return hyperHTML(x)`
+    <div class="card">
+      <div style="float: right;">
+        <button type="button" class="pseudo" onclick=${e => uninstall(x)}><i class="fa fa-trash" style="color: red"></i></button>
+      </div>
+      <p><a href="${x + '/'}">${x}/</a><p>
+    </div>`
+  }
+}
+
+async function sync () {
+  let json = await fetch('https://api.github.com/search/repositories?q=topic:gitapp', {
+    headers: {
+      'accept': 'application/vnd.github.mercy-preview+json'
+    }
+  }).then(res => res.json())
+  console.log('json =', json)
+  store.topic = json.items
+  update()
+}
+  
+async function renderTopic__Section () {
+  return hyperHTML`
+  <section id="Topic__Section">
+    <h2>Public Directory</h2>
+    <p class="subheading">Add the <span class="label" style="background: #f1f8ff; color: #0366d6;">gitapp</span> topic to your repo to display it here! <a href="https://help.github.com/articles/classifying-your-repository-with-topics/" target="_blank" rel="noopener">Instructions</a></p>
+    <div id="Topic__Results">
+      ${store.topic.map(renderRepo)}
+    </div>
+  </section>`
+}
+
+const renderSearch__Section = () => hyperHTML`
+  <section id="Search__Section">
+    <h2>Search on Github</h2>
+    <p class="subheading">Find and install static sites, such as Github Pages content.</p>
+    <div style="display: flex">
+        <input type="text" id="Search__Input" onkeydown="Search__Input__KeyDown(event)"></input>
+        <button type="button" onclick="Search__Button__Click()">Search</button>
+      </div>
+    <div id="Search__Results">
+      ${store.searchresults.map(renderRepo)}
+    </div>
+  </section>`
+
+
 const $_ = x => document.getElementById(x)
 
 async function renderRepo(x) {
+  return hyperHTML(x)`
+  <div class="card">
+    <div class="Repo__Header">
+      <div>
+        <a href=${`https://github.com/${x.owner.login}`} target="_blank" rel="noopener">${x.owner.login}</a> / <a href=${`https://github.com/${x.owner.login}/${x.name}`} target="_blank" rel="noopener">${x.name}</a>
+      </div>
+      <div class="Repo__ProgressBar">
+        <span style=${`width: ${Math.floor(store.progress[x.owner.login + '/' + x.name] * 100)}%`}></span>
+      </div>
+      <div>
+        <span><i class="fa fa-eye"></i>${x.watchers_count}</span> <span><i class="fa fa-star"></i>${x.stargazers_count}</span> <span><i class="fa fa-code-fork"></i>${x.forks_count}</span>
+      </div>
+    </div>
+    <div style="float: right;">
+      <button type="button" onclick=${e => install(x.owner.login, x.name, 'master')}>${store.progress[x.owner.login + '/' + x.name] ? 'Installing...' : 'Install'}</button>
+    </div>
+    <div>
+      ${x.description}
+    </div>
+  </div>`
+  
   async function fetchLanguages(x) {
     let json = await fetch(x.languages_url, {
       headers: {
@@ -95,21 +196,6 @@ async function renderRepo(x) {
     return json.map(x => hyperHTML.hyper`<a href="" onclick=${e => { e.preventDefault(); install(repo.owner.login, repo.name, x.name)}}>${x.name}</a>, `)
   }
 
-  return hyperHTML.hyper`
-  <div class="card">
-    <div style="float: right;">
-      <span><i class="fa fa-eye"></i>${x.watchers_count}</span> <span><i class="fa fa-star"></i>${x.stargazers_count}</span> <span><i class="fa fa-code-fork"></i>${x.forks_count}</span>
-    </div>
-    <div>
-      <a href=${`https://github.com/${x.owner.login}`} target="_blank" rel="noopener">${x.owner.login}</a> / <a href=${`https://github.com/${x.owner.login}/${x.name}`} target="_blank" rel="noopener">${x.name}</a>
-    </div>
-    <div style="float: right;">
-      <button type="button" onclick=${e => install(x.owner.login, x.name, 'master')}>Install</button>
-    </div>
-    <div>
-      ${x.description}
-    </div>
-  </div>`
 }
 
 function Search__Input__KeyDown (event) {
@@ -125,27 +211,8 @@ async function Search__Button__Click () {
       'accept': 'application/vnd.github.mercy-preview+json'
     }
   }).then(res => res.json())
-  
-  hyperHTML.bind($_('Search__Results'))`${json.items.map(renderRepo)}`
-}
-
-function renderInstallApp (x) {
-  return hyperHTML.hyper`
-    <div class="card">
-      <div style="float: right;">
-        <button type="button" class="pseudo" onclick=${e => uninstall(x)}><i class="fa fa-trash" style="color: red"></i></button>
-      </div>
-      <p><a href="${x + '/'}">${x}/</a><p>
-    </div>`
-}
-
-async function renderTopic () {
-  let json = await fetch('https://api.github.com/search/repositories?q=topic:gitapp', {
-    headers: {
-      'accept': 'application/vnd.github.mercy-preview+json'
-    }
-  }).then(res => res.json())
-  hyperHTML.bind($_('Topic__Results'))`${json.items.map(renderRepo)}`
+  store.searchresults = json.items
+  update()
 }
 
 async function install (owner, name, tag) {
@@ -167,7 +234,9 @@ async function uninstall (x) {
 }
 
 // Main
-renderTopic()
+// renderTopic()
+update()
+sync()
 if (!navigator.serviceWorker) {
   alert("Your browser doesn't support a feature (navigator.serviceWorker) needed for this app to work. Try using a newer browser.")
 } else {
@@ -179,13 +248,18 @@ if (!navigator.serviceWorker) {
         navigator.serviceWorker.controller.postMessage({
           type: 'list'
         })
-        alert('Complete!')
+        store.progress[data.regarding.repo] = undefined
+        update()
+      } else if (data.status === 'progress') {
+        store.progress[data.regarding.repo] = data.progress
+        update()
       } else if (data.status === 'error') {
         alert('Error! ' + data.error.message)
       }
     } else if (data.type === 'UpdatedDirectoryList') {
       console.log(data.list)
-      hyperHTML.bind($_('Installed__Results'))`${data.list.map(renderInstallApp)}`
+      store.installed_apps = data.list
+      update()
     }
   })
   
