@@ -1,8 +1,8 @@
 /**
- * @Last modified time: 2017-10-24T22:46:50-04:00
+ * @Last modified time: 2017-10-25T18:01:21-04:00
  */
 async function serve (path) {
-  console.log('HEY')
+  await fsReady
   return new Promise(function(resolve, reject) {
     fs.stat(path, (err, stats) => {
       console.log('err =', err)
