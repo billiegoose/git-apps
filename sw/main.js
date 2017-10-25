@@ -244,7 +244,7 @@ async function tryFsFirst (path) {
             }
           })
         } else {
-          fs.readFile(path, 'utf8', (err, data) => {
+          fs.readFile(path, (err, data) => {
             if (err) return reject(err)
             return resolve(new Response(data, {
               headers: {
