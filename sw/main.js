@@ -1,5 +1,5 @@
 /**
- * @Last modified time: 2017-10-24T22:47:45-04:00
+ * @Last modified time: 2017-10-25T00:33:08-04:00
  */
 global = self
 window = global
@@ -63,7 +63,7 @@ async function clone ({ref, repo, name}) {
 async function UpdatedDirectoryList (event) {
   return new Promise(function(resolve, reject) {
     fs.readdir('/', (err, files) => {
-      files = files.filter(x => !x.startsWith('.'))
+      files = files.filter(x => !x.startsWith('.')).filter(x => x !== 'index.html')
       let msg = {
         type: 'UpdatedDirectoryList',
         regarding: event.data,
@@ -78,6 +78,11 @@ async function UpdatedDirectoryList (event) {
 self.addEventListener('install', event => {
   return event.waitUntil((async () => {
     await fsReady
+    let res = await fetch('/index.html')
+    let text = await res.text()
+    await new Promise(function(resolve, reject) {
+      fs.writeFile('/index.html', text, 'utf8', err => err ? reject(err) : resolve())
+    })
     let uuid = await getUUID()
     console.log(uuid)
     console.log('skipWaiting()')
@@ -157,8 +162,6 @@ self.addEventListener('fetch', event => {
   let path = request.url.replace(/^(https?:)?\/\/[^\/]+/, '')
   // Sanity check
   if (path === '') path = '/'
-  // Don't try to look up ourself in the filesystem.
-  if (path === '/' || path.startsWith('/sw')) return
   // Otherwise, try fetching from the "file system".
   event.respondWith(serve(path))
 })
