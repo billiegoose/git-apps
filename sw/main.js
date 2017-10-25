@@ -48,7 +48,7 @@ async function clone ({ref, repo, name}) {
   }
   
   await fsReady
-  let dir = name + '-' + ref
+  let dir = name
   return git(dir)
     .depth(1)
     .branch(ref)
