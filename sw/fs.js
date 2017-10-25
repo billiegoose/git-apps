@@ -1,5 +1,5 @@
 /**
- * @Last modified time: 2017-10-24T22:47:24-04:00
+ * @Last modified time: 2017-10-25T17:47:09-04:00
  */
 // Step 1. Setup BrowserFS
 importScripts('https://unpkg.com/browserfs@1.4.3/dist/browserfs.js')
@@ -10,8 +10,17 @@ const fsReady = new Promise(function(resolve, reject) {
     fs: "MountableFileSystem",
     options: {
       "/": {
-        fs: "IndexedDB",
-        options: {}
+        fs: "AsyncMirror",
+        options: {
+          sync: {
+            fs: "InMemory",
+            options: {}
+          },
+          async: {
+            fs: "IndexedDB",
+            options: {}
+          }
+        }
       }
     }
   }, (err) => err ? reject(err) : resolve())
