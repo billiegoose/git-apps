@@ -1,5 +1,7 @@
+/**
+ * @Last modified time: 2017-10-24T22:47:07-04:00
+ */
 // Because isaacs "rimraf" is too Node-specific
-
 const pfy = function (fn) {
   return function (a, cb) {
     return new Promise(function(resolve, reject) {

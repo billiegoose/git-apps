@@ -1,3 +1,6 @@
+/**
+ * @Last modified time: 2017-10-24T22:47:24-04:00
+ */
 // Step 1. Setup BrowserFS
 importScripts('https://unpkg.com/browserfs@1.4.3/dist/browserfs.js')
 importScripts('https://cdnjs.cloudflare.com/ajax/libs/eventemitter3/2.0.3/index.min.js')

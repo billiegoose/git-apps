@@ -1,3 +1,6 @@
+/**
+ * @Last modified time: 2017-10-24T22:47:45-04:00
+ */
 global = self
 window = global
 importScripts('./sw/fs.js')
@@ -5,6 +8,7 @@ importScripts('./sw/mime.js')
 importScripts('https://unpkg.com/omnipath@1.1.5/dist/omnipath.min.js')
 importScripts('./sw/render-index.js')
 importScripts('./sw/rimraf.js')
+importScripts('./sw/serve.js')
 importScripts('https://unpkg.com/isomorphic-git@0.0.19/dist/bundle.umd.min.js')
 importScripts('https://gundb-git-app-manager.herokuapp.com/gun.js')
 
@@ -156,7 +160,7 @@ self.addEventListener('fetch', event => {
   // Don't try to look up ourself in the filesystem.
   if (path === '/' || path.startsWith('/sw')) return
   // Otherwise, try fetching from the "file system".
-  event.respondWith(tryFsFirst(path))
+  event.respondWith(serve(path))
 })
 
 async function permaCache (request, name) {
@@ -187,73 +191,4 @@ async function permaCache (request, name) {
     // if (res.status === 302) cache.put(betterRequest.url, res.clone())
   })
   return response
-}
-
-async function tryFsFirst (path) {
-  return new Promise(function(resolve, reject) {
-    fsReady.then(() => {
-      fs.stat(path, (err, stats) => {
-        if (err) {
-          if (err.code === 'ENOENT') console.log(path + ' ain\'t there')
-          else console.log('A more interesting error occurred!', err)
-          let response = fetch(path)
-          response
-          .then(res => {
-            console.log('---HEYHEY')
-            if (!res.ok) return
-            res.clone().text().then(content => {
-              console.log('---Saving results')
-              fs.writeFile(path, content, 'utf8')
-            })
-          })
-          .catch(console.log)
-          return resolve(response)
-        } else if (stats.isDirectory()) {
-          console.log(path + ' is a Directory!')
-          // If the directory doesn't end in a slash, redirect it
-          // because otherwise relative URLs will have trouble.
-          if (!path.endsWith('/')) return resolve(Response.redirect(path + '/', 302))
-          console.log('fs =', fs)
-          fs.readdir(path, (err, data) => {
-            if (err) return reject(err)
-            // data = JSON.stringify(data, null, 2)
-            console.log('data =', data)
-            // Serve directory/index.html if it exists
-            if (data.includes('index.html')) {
-              fs.readFile(`${path}/index.html`, 'utf8', (err, data) => {
-                if (err) return reject(err)
-                return resolve(new Response(data, {
-                  headers: {
-                    'Content-Type': 'text/html'
-                  }
-                }))
-              })
-            } else {
-              // If it doesn't exist, generate a directory index
-              try {
-                data = renderIndex(path, data)
-              } catch (e) {
-                console.log('e =', e)
-              }
-              console.log('data =', data)
-              return resolve(new Response(data, {
-                headers: {
-                  'Content-Type': 'text/html'
-                }
-              }))
-            }
-          })
-        } else {
-          fs.readFile(path, (err, data) => {
-            if (err) return reject(err)
-            return resolve(new Response(data, {
-              headers: {
-                'Content-Type': mime.lookup(path)
-              }
-            }))
-          })
-        }
-      })
-    })
-  })
 }
