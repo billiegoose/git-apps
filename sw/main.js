@@ -1,5 +1,5 @@
 /**
- * @Last modified time: 2017-10-25T17:56:57-04:00
+ * @Last modified time: 2017-10-25T23:15:45-04:00
  */
 global = self
 window = global
@@ -9,7 +9,7 @@ importScripts('https://unpkg.com/omnipath@1.1.5/dist/omnipath.min.js')
 importScripts('./sw/render-index.js')
 importScripts('./sw/rimraf.js')
 importScripts('./sw/serve.js')
-importScripts('https://unpkg.com/isomorphic-git@0.0.19/dist/bundle.umd.min.js')
+importScripts('https://unpkg.com/isomorphic-git@0.0.22/dist/service-worker-bundle.umd.min.js')
 importScripts('https://gundb-git-app-manager.herokuapp.com/gun.js')
 
 console.log('git =', git)
