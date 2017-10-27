@@ -38,10 +38,7 @@ fs.writeFile = function (file, data, options, callback) {
   console.log('writeFile', file)
   fs._origWriteFile(file, data, options, (err) => {
     if (!err) {
-      fs.Events.emit('change', {
-        eventType: 'change',
-        filename: file
-      })
+      fs.Events.emit('write', file)
     }
     if (callback) callback(err)
   })
@@ -51,10 +48,7 @@ fs.writeFileSync = function (file, ...args) {
   console.log('writeFileSync', file)
   results = fs._origWriteFileSync(file, ...args)
   setTimeout( () => {
-    fs.Events.emit('change', {
-      eventType: 'change',
-      filename: file
-    })
+    fs.Events.emit('write', file)
   }, 0)
   return results
 }
@@ -68,10 +62,7 @@ fs.mkdir = function (path, mode, callback) {
   }
   fs._origMkdir(path, mode, (err) => {
     if (!err) {
-      fs.Events.emit('change', {
-        eventType: 'change',
-        filename: path
-      })
+      fs.Events.emit('mkdir', path)
     }
     if (callback) return callback(err)
   })
@@ -80,10 +71,7 @@ fs.mkdirSync = function (path, ...args) {
   console.log('mkdirSync', path)
   let results = fs._origMkdirSync(file, ...args)
   setTimeout( () => {
-    fs.Events.emit('change', {
-      eventType: 'change',
-      filename: path
-    })
+    fs.Events.emit('mkdir', path)
   }, 0)
   return results
 }
@@ -92,10 +80,7 @@ fs.unlink = function (path, callback) {
   console.log('unlink', path)
   fs._origUnlink(path, (err) => {
     if (!err) {
-      fs.Events.emit('change', {
-        eventType: 'change',
-        filename: path
-      })
+      fs.Events.emit('unlink', path)
     }
     if (callback) return callback(err)
   })
@@ -105,10 +90,7 @@ fs.unlinkSync = function (path) {
   console.log('unlink', path)
   fs._origUnlinkSync(path)
   setTimeout( () => {
-    fs.Events.emit('change', {
-      eventType: 'change',
-      filename: path
-    })
+    fs.Events.emit('unlink', path)
   }, 0)
   return undefined
 }
@@ -117,10 +99,7 @@ fs.rmdir = function (path, callback) {
   console.log('rmdir', path)
   fs._origRmdir(path, (err) => {
     if (!err) {
-      fs.Events.emit('change', {
-        eventType: 'change',
-        filename: path
-      })
+      fs.Events.emit('rmdir', path)
     }
     if (callback) return callback(err)
   })
@@ -130,10 +109,7 @@ fs.rmdirSync = function (path) {
   console.log('rmdir', path)
   fs._origRmdirSync(path)
   setTimeout( () => {
-    fs.Events.emit('change', {
-      eventType: 'change',
-      filename: path
-    })
+    fs.Events.emit('rmdir', path)
   }, 0)
   return undefined
 }
