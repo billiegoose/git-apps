@@ -1,5 +1,5 @@
 /**
- * @Last modified time: 2017-10-24T22:47:16-04:00
+ * @Last modified time: 2017-10-27T17:44:23-04:00
  */
 const toPaths = (dirname) => {
   let pieces = dirname.replace(/^\//, '').split('/').filter(x => x !== '')

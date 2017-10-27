@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Git App Manager v0.0.0-alpha.6</title>
+  <title>Git App Manager v0.0.0-alpha.7</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic@6.4.0/picnic.min.css">
@@ -73,18 +73,26 @@ const store = {
   installed_apps: [],
   progress: [],
   topic: [],
-  searchresults: []
+  searchresults: [],
+  resource: window.location && window.location.search && URLSearchParams && (new URLSearchParams(window.location.search)).get('uri').replace('web+gitapp://', '')
 }
 
 function update () {
-  hyperHTML.bind(document.getElementById('app'))`
-  <app>
-    ${renderHeader__Section()}
-    ${renderInstalled__Section()}
-    ${renderSearch__Section()}
-    ${renderTopic__Section()}
-  </app>
-`
+  if (store.resource) {
+    hyperHTML.bind(document.getElementById('app'))`
+    <app>
+      <h1>OID ${store.resource}<h1>
+    </app>`
+  } else {
+    hyperHTML.bind(document.getElementById('app'))`
+    <app>
+      ${renderHeader__Section()}
+      ${renderInstalled__Section()}
+      ${renderSearch__Section()}
+      ${renderTopic__Section()}
+      ${renderGitappLinks__Section()}
+    </app>`
+  }
 }
 
 function renderHeader__Section () {
@@ -100,9 +108,29 @@ function renderHeader__Section () {
     : ''
   return hyperHTML`
   <section id="Header__Section">
-    <h1>Git App Manager v0.0.0-alpha.6</h1>
+    <h1>Git App Manager v0.0.0-alpha.7</h1>
     <p class="subheading">Install static websites directly from Github. Use them offline. Edit the source code with <a href="https://github.com/wmhilton/nde" target="_blank" rel="noopener">nde</a>. <i><b>Planned features:</b> Fork sites. Control when and if sites auto-update. Rollback an app to any previous version. Install multiple versions of an app. Take advantage of a shared library modules cache. Seed your app with P2P technology of some sort. Facilitate webpush notifications.</i></p>
     ${firefoxReadableStreamInstructions}
+  </section>`
+}
+
+function renderGitappLinks__Section () {
+  const available = (self && self.navigator && self.navigator.registerProtocolHandler)
+  const title = available ? '' : 'Sorry, registerProtocolHandler is not available in this browser.'
+  return hyperHTML`
+  <section id="GitappLinks__Section">
+    <h2>web+gitapp:// links</h2>
+    <p class="subheading">
+      I would love the ability to use any git object id (aka SHA) as a URI resource. E.g. <code>&lt;img&nbsp;src="git://a69cffdcc2c25a72be08117ad708974a7429effe"&gt;</code>.
+      This doesn't actually do that (yet) but here is a baby step.
+    </p>
+    <p>
+      Click here to register "web+gitapp://" links to open using ${self.location.host}:
+      <button type="button" disabled=${!available} title=${title} onclick=${registerProtocol}>web+gitapp://</button>
+    </p>
+    <p>
+      Here's an example link you can click <a href="web+gitapp://0fda723910a6952176e73eeb5bbeaece1ef99110">web+gitapp://0fda723910a6952176e73eeb5bbeaece1ef99110</a>
+    </p>
   </section>`
 }
 
@@ -299,5 +327,18 @@ if (!navigator.serviceWorker) {
       })
     })
   })
+}
+
+function registerProtocol () {
+  // Register a custom protocol handler for git
+  if (self && self.navigator && self.navigator.registerProtocolHandler) {
+    self.navigator.registerProtocolHandler(
+      'web+gitapp',
+      `${self.location.protocol}//${self.location.host}/?uri=%s`,
+      'Git'
+    )
+  } else {
+    alert('Sorry, registerProtocolHandler is not supported in this browser.')
+  }
 }
 </script>
