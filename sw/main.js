@@ -160,6 +160,10 @@ self.addEventListener('fetch', event => {
   if (!request.url.startsWith(self.location.origin)) return
   // Turn URL into a file path
   let path = OmniPath.parse(request.url).pathname //.replace(/^(https?:)?\/\/[^\/]+/, '')
+  if (OmniPath.parse(request.url).query.uri && OmniPath.parse(request.url).query.uri === 'web+gitapp://0fda723910a6952176e73eeb5bbeaece1ef99110') {
+    console.log('OH HEY COOL I KNOW THIS ONE HASH: ' + request.url)
+    return event.respondWith(fetch('https://wmhilton.github.io/favicon/favicon-96x96.png'))
+  }
   // Sanity check
   if (path === '') path = '/'
   // Otherwise, try fetching from the "file system".
