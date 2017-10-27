@@ -159,7 +159,7 @@ self.addEventListener('fetch', event => {
   // For now, ignore other domains. We might very well want to cache them later though.
   if (!request.url.startsWith(self.location.origin)) return
   // Turn URL into a file path
-  let path = request.url.replace(/^(https?:)?\/\/[^\/]+/, '')
+  let path = OmniPath.parse(request.url).pathname //.replace(/^(https?:)?\/\/[^\/]+/, '')
   // Sanity check
   if (path === '') path = '/'
   // Otherwise, try fetching from the "file system".
@@ -174,24 +174,16 @@ async function permaCache (request, name) {
   })
   let cache = await caches.open(name)
   let response = await cache.match(betterRequest.url)
-  console.log('request.url =', betterRequest.url)
   if (response) {
-    console.log('yay!', betterRequest.url)
     return response
   }
   response = fetch(betterRequest)
   response.then(res => {
-    console.log('Y U NOT CACHED?', betterRequest)
-    console.log(res.status, betterRequest.url, res.url)
-    // Note: It is important that we use the response URL,
-    // not the request URL, unless you want to permanently
-    // resolve redirects. I only want to permanently resolve
-    // exact versions.
+    // Let's just cache the redirected result,
+    // because that gives us true offline support,
+    // and (unintentionally) pins module versions on first use.
+    // TODO: Add a way to un-pin the cached version of an unpkg library.
     if (res.status === 200) cache.put(request.url, res.clone())
-    // Changed my mind. Let's just cache the redirected result,
-    // because that gives us true offline support, version pinning
-    // be damned.
-    // if (res.status === 302) cache.put(betterRequest.url, res.clone())
   })
   return response
 }

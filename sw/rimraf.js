@@ -16,25 +16,31 @@ const rmdir = pfy(fs.rmdir.bind(fs))
 
 // It's elegant in it's naivety
 async function rimraf (path) {
-  // First, assume everything is a file.
+  try {
+    // First assume path is itself a file
+    await unlink(path)
+    // if that worked we're done
+    return
+  } catch (err) {
+    // Otherwise, path must be a directory
+    if (err.code !== 'EISDIR') throw err
+  }
+  // Knowing path is a directory,
+  // first, assume everything inside path is a file.
   let files = await readdir(path)
   for (let file of files) {
     let child = path + '/' + file
     try {
       await fs.unlink(child)
     } catch (err) {
-      console.log('err =', err)
+      if (err.code !== 'EISDIR') throw err
     }
   }
   // Assume what's left are directories and recurse.
   let dirs = await readdir(path)
   for (let dir of dirs) {
     let child = path + '/' + dir
-    try {
-      await rimraf(child)
-    } catch (err) {
-      console.log('err =', err)
-    }
+    await rimraf(child)
   }
   // Finally, delete the empty directory
   await rmdir(path)

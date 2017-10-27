@@ -5,7 +5,6 @@ async function serve (path) {
   await fsReady
   return new Promise(function(resolve, reject) {
     fs.stat(path, (err, stats) => {
-      console.log('err =', err)
       if (err) {
         if (err.code === 'ENOENT') {
           console.log('return with a 404')
