@@ -67,7 +67,9 @@ section {
 }
 </style>
 <script src="https://unpkg.com/hyperhtml@latest/min.js"></script>
-<script>
+<script type="module">
+
+import { fs, fsEvents, git, waitForWorker, setupServiceWorker } from 'https://unpkg.com/@wmhilton/wills-wonderful-service-worker@0.0.2/dist/client.js'
 
 const store = {
   installed_apps: [],
@@ -184,8 +186,8 @@ const renderSearch__Section = () => hyperHTML`
     <h2>Search on Github</h2>
     <p class="subheading">Find and install static sites, such as Github Pages content.</p>
     <div style="display: flex">
-        <input type="text" id="Search__Input" onkeydown="Search__Input__KeyDown(event)"></input>
-        <button type="button" onclick="Search__Button__Click()">Search</button>
+        <input type="text" id="Search__Input" onkeydown=${Search__Input__KeyDown}></input>
+        <button type="button" onclick=${Search__Button__Click}>Search</button>
       </div>
     <div id="Search__Results">
       ${store.searchresults.map(renderRepo)}
@@ -273,6 +275,15 @@ async function uninstall (x) {
   navigator.serviceWorker.controller.postMessage(msg)
 }
 
+async function updateList () {
+  await waitForWorker()
+  let files = await fs.readdir('/')
+  files = files.filter(x => !x.startsWith('.')).filter(x => x !== 'index.html')
+  store.installed_apps = files
+  console.log('updated list!', files)
+  update()
+}
+
 // Main
 // renderTopic()
 update()
@@ -285,9 +296,7 @@ if (!navigator.serviceWorker) {
     console.log('data =', data)
     if (data.type === 'status') {
       if (data.status === 'complete') {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'list'
-        })
+        updateList()
         store.progress[data.regarding.repo] = undefined
         update()
       } else if (data.status === 'progress') {
@@ -296,37 +305,13 @@ if (!navigator.serviceWorker) {
       } else if (data.status === 'error') {
         alert('Error! ' + data.error.message)
       }
-    } else if (data.type === 'UpdatedDirectoryList') {
-      console.log(data.list)
-      store.installed_apps = data.list
-      update()
     }
   })
   
   navigator.serviceWorker
   .register('service-worker.js', { scope: '/' })
-  .then((reg) => {
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'list'
-      })
-    }
-    reg.addEventListener('updatefound', () => {
-      let newWorker = reg.installing
-      newWorker.addEventListener('statechange', () => {
-        console.log('reg.installing.state =', newWorker.state)
-        if (newWorker.state === 'activated') {
-          // let msg = {
-          //   type: "clone",
-          //   repo: "wmhilton/test.empty",
-          //   branch: "master",
-          //   name: "foo"
-          // }
-          // console.log('fetch()')
-          // newWorker.postMessage(msg)
-        }
-      })
-    })
+  .then(async (reg) => {
+    updateList()
   })
 }
 

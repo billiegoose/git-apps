@@ -1,4 +1,4 @@
 /**
- * @Last modified time: 2017-12-14T20:22:52-05:00
+ * @Last modified time: 2017-12-17T00:14:14-05:00
  */
-importScripts('https://unpkg.com/@wmhilton/wills-wonderful-service-worker@0.0.1/dist/wwsw.js')
+importScripts('https://unpkg.com/@wmhilton/wills-wonderful-service-worker@0.0.2/dist/wwsw.js')
